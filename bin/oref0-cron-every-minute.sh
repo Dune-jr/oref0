@@ -21,6 +21,13 @@ BT_MAC="$(get_pref_string .bt_mac "")"
 PUSHOVER_TOKEN="$(get_pref_string .pushover_token "")"
 PUSHOVER_USER="$(get_pref_string .pushover_user "")"
 
+# Profiling requires you to
+# - install: matplotlib, tkinter
+# - install psrecord and patch it with this fix: https://github.com/astrofrog/psrecord/pull/56
+# - run: echo "backend: Agg" > ~/.config/matplotlib/matplotlibrc
+# - set this variable to something to enable it
+PROFILING=
+
 function is_process_running_named ()
 {
     if ps aux |grep -v grep |grep -q "$1"; then
@@ -101,14 +108,23 @@ fi
 
 if ! is_bash_process_running_named oref0-ns-loop; then
     oref0-ns-loop | tee -a /var/log/openaps/ns-loop.log | adddate openaps.ns-loop | uncolor |tee -a /var/log/openaps/openaps-date.log &
+    if [[ ! -z "$PROFILING" ]]; then
+        psrecord $! --interval 1 --duration 120 --plot /var/log/openaps/profiling_plot_ns.png --log /var/log/openaps/profiling_ns.log --include-children
+    fi
 fi
 
 if ! is_bash_process_running_named oref0-autosens-loop; then
     oref0-autosens-loop 2>&1 | tee -a /var/log/openaps/autosens-loop.log | adddate openaps.autosens-loop | uncolor |tee -a /var/log/openaps/openaps-date.log &
+    if [[ ! -z "$PROFILING" ]]; then
+        psrecord $! --interval 1 --duration 120 --plot /var/log/openaps/profiling_plot_autosens.png --log /var/log/openaps/profiling_autosens.log --include-children
+    fi
 fi
 
 if ! is_bash_process_running_named oref0-pump-loop; then
     oref0-pump-loop 2>&1 | tee -a /var/log/openaps/pump-loop.log | adddate openaps.pump-loop | uncolor |tee -a /var/log/openaps/openaps-date.log &
+    if [[ ! -z "$PROFILING" ]]; then
+        psrecord $! --interval 1 --duration 120 --plot /var/log/openaps/profiling_plot_pump.png --log /var/log/openaps/profiling_pump.log --include-children
+    fi
 fi
 
 if [[ ! -z "$BT_PEB" ]]; then
